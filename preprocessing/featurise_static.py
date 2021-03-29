@@ -2,7 +2,7 @@ import os
 import argparse
 import time
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 
 import numpy as np
 from scipy.stats import norm, invwishart, multivariate_normal
@@ -13,7 +13,7 @@ import pdb
 
 
 def main(args):
-    ptl = args.path + 'positions/' + args.subdir
+    ptl = args.path + 'positions/' + args.subdir + '/'
 
     # Load ion positions
     anion_paths = np.load(ptl + 'anion_positions.npy')
@@ -119,9 +119,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, default='../data/md-trajectories/',
+    parser.add_argument('--path', type=str, default='../../data/md-trajectories/',
                         help='Path to directory containing data.')
-    parser.add_argument('--pts', type=str, default='../data/processed/',
+    parser.add_argument('--pts', type=str, default='../../data/processed/',
                         help='Path to directory containing data.')
     parser.add_argument('--subdir', type=str, default='5',
                         help='Sub directory of interest.')

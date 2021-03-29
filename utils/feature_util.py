@@ -60,6 +60,85 @@ def rdf(r, prefactor, bin_size, ion_size, min_r_value, max_r_value, smoothed=Fal
         upper_r_bound = upper_r_bound + bin_size
     return gs
 
+# Compute g(r) and vacf(r)
+def vrdf(r, vv, prefactor, bin_size, ion_size, min_r_value, max_r_value, smoothed=False):
+    """
+    For a given array of central ion A - ion B distances this calculates
+    the A-B (smoothed or not smoothed) radial distribution function g(r) as an array.
+    :param r: Vector of distances of ions of type A from the central ion of type B.
+    :param prefactor: Scalar value equal to the reciprocal of average number density
+                      in ideal gas with the same overall density (float).
+    :param bin_size: Histogram bin size (float).
+    :param ion_size: Size of each ion, used to calculate the smoothed RDF (float).
+    :param min_r_value: The minimum x value to be considered in the histogram (float).
+    :param max_r_value: The maximum x value to be considered in the histogram (float).
+    :param smoothed: If true, the smoothed RDF is calculated; if false, the standard RDF
+                     is calculated.
+    :return:
+    """
+    number_of_bins = int((max_r_value - min_r_value) / bin_size)
+    gs = []
+    vs = []
+    lower_r_bound = min_r_value
+    upper_r_bound = min_r_value + bin_size
+    for i in range(0, number_of_bins):
+        r_mean = 0.5 * (lower_r_bound + upper_r_bound)
+        V_shell = 4 * np.pi * r_mean ** 2 * bin_size
+
+        idx = np.where(abs(r - lower_r_bound - 0.5*bin_size) <= 0.5*bin_size)
+
+        if smoothed:
+            x = norm.cdf(upper_r_bound, loc=r, scale=ion_size) - \
+                norm.cdf(lower_r_bound, loc=r, scale=ion_size)
+
+        else:
+            x = ((lower_r_bound < r) & (r < upper_r_bound))
+        number_in_bin = np.sum(x)
+        vv_bin = np.dot(x, vv) / V_shell
+        vs.append(vv_bin)
+        g = prefactor * number_in_bin / V_shell
+        gs.append(g)
+        lower_r_bound = upper_r_bound
+        upper_r_bound = upper_r_bound + bin_size
+    return gs, vs
+
+def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length, bin_size=0.5, ion_size=0.5,
+                          min_r_value=0.5, max_r_value=5.0, smoothed=True):
+
+    prefactor_aa = box_length ** 3 / (typeAx.shape[0] - 1)
+    prefactor_ab = box_length ** 3 / (typeBx.shape[0])
+
+    # Step 1: Compute typeA-typeA feature vector
+    distances_aa = []
+    velocities_aa = []
+    for j in range(typeAx.shape[0]):
+        if j == typeA_id:
+            continue
+        r = radial_distance(typeAx[typeA_id, 0], typeAx[typeA_id, 1], typeAx[typeA_id, 2],
+                            typeAx[j, 0], typeAx[j, 1], typeAx[j, 2], box_length)
+        vv = np.dot(typeAv[typeA_id, :], typeAv[j, :])
+
+        distances_aa.append(r)
+        velocities_aa.append(vv)
+    distances_aa = np.asarray(distances_aa)
+    velocities_aa = np.asarray(velocities_aa)
+    x_aa, v_aa = vrdf(distances_aa, velocities_aa, prefactor_aa, bin_size, ion_size, min_r_value, max_r_value, smoothed)
+
+    # Step 2: Compute typeA-typeB feature vector
+    distances_ab = []
+    velocities_ab = []
+    for j in range(typeBx.shape[0]):
+        r = radial_distance(typeAx[typeA_id, 0], typeAx[typeA_id, 1], typeAx[typeA_id, 2],
+                            typeBx[j, 0], typeBx[j, 1], typeBx[j, 2], box_length)
+        vv = np.dot(typeAv[typeA_id, :], typeBv[j, :])
+        distances_ab.append(r)
+        velocities_ab.append(vv)
+    distances_ab = np.asarray(distances_ab)
+    x_ab, v_ab = vrdf(distances_ab, velocities_ab, prefactor_ab, bin_size, ion_size, min_r_value, max_r_value, smoothed)
+
+    return np.hstack((x_aa, x_ab, v_aa, v_ab))
+
+
 
 def static_feature_vector(typeA, typeB, typeA_id, box_length, bin_size=0.5, ion_size=0.5,
                           min_r_value=0.5, max_r_value=5.0, smoothed=True):
@@ -92,6 +171,3 @@ def static_feature_vector(typeA, typeB, typeA_id, box_length, bin_size=0.5, ion_
     x_ab = rdf(distances_ab, prefactor_ab, bin_size, ion_size, min_r_value, max_r_value, smoothed)
 
     return np.concatenate((x_aa, x_ab))
-
-
-# TODO: Write a 'velocity correlation function' descriptor
