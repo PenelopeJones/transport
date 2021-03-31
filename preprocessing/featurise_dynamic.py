@@ -116,8 +116,8 @@ def main(args):
     if not os.path.exists(args.pts):
         os.makedirs(args.pts)
 
-    np.save(args.pts + 'X_{}.npy'.format(args.subdir), X)
-    np.save(args.pts + 'y_{}.npy'.format(args.subdir), y)
+    np.save(args.pts + 'X_{}_new.npy'.format(args.subdir), X)
+    np.save(args.pts + 'y_{}_new.npy'.format(args.subdir), y)
 
 
 if __name__ == "__main__":

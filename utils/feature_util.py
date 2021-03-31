@@ -3,6 +3,24 @@ from scipy.stats import norm, invwishart, multivariate_normal
 
 import pdb
 
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
 # Compute inter-ion distance given the particle positions
 def radial_distance(x_i, y_i, z_i, x_j, y_j, z_j, box_length):
     """
@@ -61,7 +79,7 @@ def rdf(r, prefactor, bin_size, ion_size, min_r_value, max_r_value, smoothed=Fal
     return gs
 
 # Compute g(r) and vacf(r)
-def vrdf(r, vv, prefactor, bin_size, ion_size, min_r_value, max_r_value, smoothed=False):
+def vrdf(r, speeds, directions, prefactor, bin_size, ion_size, min_r_value, max_r_value, smoothed=False):
     """
     For a given array of central ion A - ion B distances this calculates
     the A-B (smoothed or not smoothed) radial distribution function g(r) as an array.
@@ -79,6 +97,7 @@ def vrdf(r, vv, prefactor, bin_size, ion_size, min_r_value, max_r_value, smoothe
     number_of_bins = int((max_r_value - min_r_value) / bin_size)
     gs = []
     vs = []
+    thetas = []
     lower_r_bound = min_r_value
     upper_r_bound = min_r_value + bin_size
     for i in range(0, number_of_bins):
@@ -94,13 +113,15 @@ def vrdf(r, vv, prefactor, bin_size, ion_size, min_r_value, max_r_value, smoothe
         else:
             x = ((lower_r_bound < r) & (r < upper_r_bound))
         number_in_bin = np.sum(x)
-        vv_bin = np.dot(x, vv) / V_shell
-        vs.append(vv_bin)
-        g = prefactor * number_in_bin / V_shell
-        gs.append(g)
+        v_bin = np.dot(x, speeds) / number_in_bin
+        theta_bin = np.dot(x, thetas) / number_in_bin
+        g_bin = number_in_bin * prefactor / V_shell
+        vs.append(v_bin)
+        thetas.append(theta_bin)
+        gs.append(g_bin)
         lower_r_bound = upper_r_bound
         upper_r_bound = upper_r_bound + bin_size
-    return gs, vs
+    return gs, vs, thetas
 
 def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length, bin_size=0.5, ion_size=0.5,
                           min_r_value=0.5, max_r_value=5.0, smoothed=True):
@@ -110,19 +131,24 @@ def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length,
 
     # Step 1: Compute typeA-typeA feature vector
     distances_aa = []
-    velocities_aa = []
+    speeds_aa = []
+    directions_aa = []
     for j in range(typeAx.shape[0]):
         if j == typeA_id:
             continue
         r = radial_distance(typeAx[typeA_id, 0], typeAx[typeA_id, 1], typeAx[typeA_id, 2],
                             typeAx[j, 0], typeAx[j, 1], typeAx[j, 2], box_length)
-        vv = np.dot(typeAv[typeA_id, :], typeAv[j, :])
+
+        rel_speed = np.abs(typeAv[typeA_id, :] - typeAv[j, :])
+        rel_direction = angle_between(typeAv[typeA_id, :], typeAv[j, :])
 
         distances_aa.append(r)
-        velocities_aa.append(vv)
+        speeds_aa.append(rel_speed)
+        directions_aa.append(rel_direction)
     distances_aa = np.asarray(distances_aa)
-    velocities_aa = np.asarray(velocities_aa)
-    x_aa, v_aa = vrdf(distances_aa, velocities_aa, prefactor_aa, bin_size, ion_size, min_r_value, max_r_value, smoothed)
+    speeds_aa = np.asarray(speeds_aa)
+    directions_aa = np.asarray(directions_aa)
+    x_aa, v_aa, theta_aa = vrdf(distances_aa, speeds_aa, directions_aa, prefactor_aa, bin_size, ion_size, min_r_value, max_r_value, smoothed)
 
     # Step 2: Compute typeA-typeB feature vector
     distances_ab = []
@@ -130,13 +156,14 @@ def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length,
     for j in range(typeBx.shape[0]):
         r = radial_distance(typeAx[typeA_id, 0], typeAx[typeA_id, 1], typeAx[typeA_id, 2],
                             typeBx[j, 0], typeBx[j, 1], typeBx[j, 2], box_length)
-        vv = np.dot(typeAv[typeA_id, :], typeBv[j, :])
+        rel_speed = np.abs(typeAv[typeA_id, :] - typeBv[j, :])
+        rel_direction = angle_between(typeAv[typeA_id, :], typeBv[j, :])
         distances_ab.append(r)
         velocities_ab.append(vv)
     distances_ab = np.asarray(distances_ab)
-    x_ab, v_ab = vrdf(distances_ab, velocities_ab, prefactor_ab, bin_size, ion_size, min_r_value, max_r_value, smoothed)
+    x_ab, v_ab, theta_ab = vrdf(distances_ab, speeds_ab, directions_ab, prefactor_ab, bin_size, ion_size, min_r_value, max_r_value, smoothed)
 
-    return np.hstack((x_aa, x_ab, v_aa, v_ab))
+    return np.hstack((x_aa, x_ab, v_aa, v_ab, theta_aa, theta_ab))
 
 
 
