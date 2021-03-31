@@ -119,6 +119,7 @@ def vrdf(r, speeds, directions, prefactor, bin_size, ion_size, min_r_value, max_
         vs.append(v_bin)
         thetas.append(theta_bin)
         gs.append(g_bin)
+
         lower_r_bound = upper_r_bound
         upper_r_bound = upper_r_bound + bin_size
     return gs, vs, thetas
@@ -149,7 +150,7 @@ def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length,
     speeds_aa = np.asarray(speeds_aa)
     directions_aa = np.asarray(directions_aa)
     x_aa, v_aa, theta_aa = vrdf(distances_aa, speeds_aa, directions_aa, prefactor_aa, bin_size, ion_size, min_r_value, max_r_value, smoothed)
-
+    pdb.set_trace()
     # Step 2: Compute typeA-typeB feature vector
     distances_ab = []
     speeds_ab = []
