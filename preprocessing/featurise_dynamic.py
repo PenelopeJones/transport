@@ -128,11 +128,11 @@ if __name__ == "__main__":
                         help='Path to directory containing data.')
     parser.add_argument('--subdir', type=str, default='6',
                         help='Sub directory of interest.')
-    parser.add_argument('--print_freq', type=int, default=2,
+    parser.add_argument('--print_freq', type=int, default=25,
                         help='Print every N snapshots.')
-    parser.add_argument('--n_snapshots', type=int, default=10,
+    parser.add_argument('--n_snapshots', type=int, default=500,
                         help='Number of snapshots.')
-    parser.add_argument('--cutoff', type=int, default=2,
+    parser.add_argument('--cutoff', type=int, default=150,
                         help='Expected maximum number of snapshots over which ions are paired.')
 
     args = parser.parse_args()
