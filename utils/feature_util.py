@@ -139,7 +139,7 @@ def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length,
         r = radial_distance(typeAx[typeA_id, 0], typeAx[typeA_id, 1], typeAx[typeA_id, 2],
                             typeAx[j, 0], typeAx[j, 1], typeAx[j, 2], box_length)
 
-        rel_speed = np.abs(typeAv[typeA_id, :] - typeAv[j, :])
+        rel_speed = np.linalg.norm(typeAv[typeA_id, :] - typeAv[j, :])
         rel_direction = angle_between(typeAv[typeA_id, :], typeAv[j, :])
 
         distances_aa.append(r)
