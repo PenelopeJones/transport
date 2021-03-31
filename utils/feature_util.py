@@ -114,7 +114,7 @@ def vrdf(r, speeds, directions, prefactor, bin_size, ion_size, min_r_value, max_
             x = ((lower_r_bound < r) & (r < upper_r_bound))
         number_in_bin = np.sum(x)
         v_bin = np.dot(x, speeds) / number_in_bin
-        theta_bin = np.dot(x, thetas) / number_in_bin
+        theta_bin = np.dot(x, directions) / number_in_bin
         g_bin = number_in_bin * prefactor / V_shell
         vs.append(v_bin)
         thetas.append(theta_bin)
