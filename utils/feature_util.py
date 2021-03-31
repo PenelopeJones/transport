@@ -152,15 +152,19 @@ def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length,
 
     # Step 2: Compute typeA-typeB feature vector
     distances_ab = []
-    velocities_ab = []
+    speeds_ab = []
+    directions_ab = []
     for j in range(typeBx.shape[0]):
         r = radial_distance(typeAx[typeA_id, 0], typeAx[typeA_id, 1], typeAx[typeA_id, 2],
                             typeBx[j, 0], typeBx[j, 1], typeBx[j, 2], box_length)
         rel_speed = np.abs(typeAv[typeA_id, :] - typeBv[j, :])
         rel_direction = angle_between(typeAv[typeA_id, :], typeBv[j, :])
         distances_ab.append(r)
-        velocities_ab.append(vv)
+        speeds_ab.append(rel_speed)
+        directions_ab.append(rel_direction)
     distances_ab = np.asarray(distances_ab)
+    speeds_ab = np.asarray(speeds_ab)
+    directions_ab = np.asarray(directions_ab)
     x_ab, v_ab, theta_ab = vrdf(distances_ab, speeds_ab, directions_ab, prefactor_ab, bin_size, ion_size, min_r_value, max_r_value, smoothed)
 
     return np.hstack((x_aa, x_ab, v_aa, v_ab, theta_aa, theta_ab))
