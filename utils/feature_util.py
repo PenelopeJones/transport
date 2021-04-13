@@ -3,6 +3,43 @@ from scipy.stats import norm, invwishart, multivariate_normal
 
 import pdb
 
+def compute_overlap(r, lower_r_bound, bin_size, ion_size):
+
+    # intermediate calculations
+    p1 = norm.cdf(lower_r_bound + bin_size, loc=r, scale=ion_size) - \
+         norm.cdf(lower_r_bound, loc=r, scale=ion_size)
+
+    p2 = norm.cdf(lower_r_bound + bin_size, loc=-r, scale=ion_size) - \
+         norm.cdf(lower_r_bound, loc=-r, scale=ion_size)
+
+    a = (ion_size / r) * (0.5 / np.pi) ** 0.5
+
+    q1 = np.exp(-0.5*(lower_r_bound + bin_size - r)**2 / ion_size**2)
+    q2 = np.exp(-0.5*(lower_r_bound - r)**2 / ion_size**2)
+    q3 = np.exp(-0.5*(lower_r_bound + bin_size + r)**2 / ion_size**2)
+    q4 = np.exp(-0.5*(lower_r_bound + r)**2 / ion_size**2)
+
+    tot = p1 + p2 + a*(q2 - q1 + q3 - q4)
+
+    return tot
+
+
+def tabulate_overlaps(min_r_value, max_r_value, bin_size, ion_size, resolution):
+    number_of_bins = int((max_r_value - min_r_value) / bin_size)
+    lower_r_bounds = np.arange(min_r_value, max_r_value, bin_size)
+    r_values = np.arange(ion_size, max_r_value + 4*ion_size, resolution)
+    tabulated = np.zeros((lower_r_bounds.shape[0], r_values.shape[0]))
+
+
+    for i, lower_r_bound in enumerate(lower_r_bounds):
+        tabulated[i, :] = compute_overlap(r_values, lower_r_bound, bin_size, ion_size)
+        pdb.set_trace()
+
+    pdb.set_trace()
+
+    return tabulated
+
+
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
     return vector / np.linalg.norm(vector)
@@ -107,9 +144,7 @@ def vrdf(r, speeds, directions, prefactor, bin_size, ion_size, min_r_value, max_
         idx = np.where(abs(r - lower_r_bound - 0.5*bin_size) <= 0.5*bin_size)
 
         if smoothed:
-            x = norm.cdf(upper_r_bound, loc=r, scale=ion_size) - \
-                norm.cdf(lower_r_bound, loc=r, scale=ion_size)
-
+            x = compute_overlap(r, lower_r_bound, bin_size, ion_size)
         else:
             x = ((lower_r_bound < r) & (r < upper_r_bound))
         number_in_bin = np.sum(x)
@@ -166,7 +201,7 @@ def dynamic_feature_vector(typeAx, typeBx, typeAv, typeBv, typeA_id, box_length,
     speeds_ab = np.asarray(speeds_ab)
     directions_ab = np.asarray(directions_ab)
     x_ab, v_ab, theta_ab = vrdf(distances_ab, speeds_ab, directions_ab, prefactor_ab, bin_size, ion_size, min_r_value, max_r_value, smoothed)
-    
+
     return np.hstack((x_aa, x_ab, v_aa, v_ab, theta_aa, theta_ab))
 
 
